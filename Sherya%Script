@@ -1,0 +1,107 @@
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/memejames/elerium-v2-ui-library/main/Library", true))()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local player = Players.LocalPlayer
+
+local window = library:AddWindow("Sherya Script", {
+    main_color = Color3.fromRGB(200, 0, 255),
+    min_size = Vector2.new(660, 660),
+    can_resize = false,
+})
+
+local maintab = window:AddTab("Main")
+local farmtab = window:AddTab("Farm")
+local misctab = window:AddTab("Misc")
+local eggtab = window:AddTab("Eggs")
+local paidtab = window:AddTab("Paid")
+local Killing = window:AddTab("Killer")
+local playertab = window:AddTab("Players")
+local teleporttab = window:AddTab("Teleport")
+local calculatortab = window:AddTab("Calculator")
+local credittab = window:AddTab("Credits")
+
+local BrawlFolder = maintab:AddFolder("  Auto Brawl")
+
+local godModeToggle = false
+BrawlFolder:AddSwitch("God Mode (Brawl)", function(State)
+    godModeToggle = State
+    if State then
+        task.spawn(function()
+            while godModeToggle do
+                game:GetService("ReplicatedStorage").rEvents.brawlEvent:FireServer("joinBrawl")
+                task.wait(0)
+            end
+        end)
+    end
+end)
+
+local autoJoinToggle = false
+BrawlFolder:AddSwitch("Auto Join Brawl", function(State)
+    autoJoinToggle = State
+    if State then
+        task.spawn(function()
+            while autoJoinToggle do
+                game:GetService("ReplicatedStorage").rEvents.brawlEvent:FireServer("joinBrawl")
+                task.wait(2)
+            end
+        end)
+    end
+end)
+
+local RockFolder = maintab:AddFolder("  Auto Rock")
+
+local function gettool()
+    for i, v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
+        if v.Name == "Punch" and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+            game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
+        end
+    end
+    game:GetService("Players").LocalPlayer.muscleEvent:FireServer("punch", "leftHand")
+    game:GetService("Players").LocalPlayer.muscleEvent:FireServer("punch", "rightHand")
+end
+
+local rockData = {
+    ["Tiny Rock"] = 0,
+    ["Starter Island"] = 100,
+    ["Punching Rock"] = 1000,
+    ["Golden Rock"] = 5000,
+    ["Frost Rock"] = 150000,
+    ["Mythical Rock"] = 400000,
+    ["Eternal Rock"] = 750000,
+    ["Legend Rock"] = 1000000,
+    ["Muscle King Rock"] = 5000000,
+    ["Jungle Rock"] = 10000000
+}
+
+local rockLocations = {
+    "Tiny Rock", "Starter Island", "Punching Rock", "Golden Rock", 
+    "Frost Rock", "Mythical Rock", "Eternal Rock", "Legend Rock",
+    "Muscle King Rock", "Jungle Rock"
+}
+
+for _, rock in ipairs(rockLocations) do
+    local rockSwitch = RockFolder:AddSwitch(rock, function(enabled)
+        local requiredDurability = rockData[rock]
+        getgenv().Main = enabled
+
+        while getgenv().Main do
+            task.wait()
+            if game:GetService("Players").LocalPlayer.Durability.Value >= requiredDurability then
+                for i, v in pairs(game:GetService("Workspace").machinesFolder:GetDescendants()) do
+                    if v.Name == "neededDurability" and v.Value == requiredDurability and
+                        game.Players.LocalPlayer.Character:FindFirstChild("LeftHand") and
+                        game.Players.LocalPlayer.Character:FindFirstChild("RightHand") then
+
+                        firetouchinterest(v.Parent.Rock, game:GetService("Players").LocalPlayer.Character.RightHand, 0)
+                        firetouchinterest(v.Parent.Rock, game:GetService("Players").LocalPlayer.Character.RightHand, 1)
+                        firetouchinterest(v.Parent.Rock, game:GetService("Players").LocalPlayer.Character.LeftHand, 0)
+                        firetouchinterest(v.Parent.Rock, game:GetService("Players").LocalPlayer.Character.LeftHand, 1)
+                        gettool()
+                    end
+                end
+            end
+        end
+    end)
+end
