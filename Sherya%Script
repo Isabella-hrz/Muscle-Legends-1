@@ -12,7 +12,7 @@ local window = library:AddWindow("Sherya Script", {
 })
 
 local maintab = window:AddTab("Main")
-local gymtab = window:AddTab("Gyms")
+local farmtab = window:AddTab("Farm")
 local misctab = window:AddTab("Misc")
 local eggtab = window:AddTab("Eggs")
 local paidtab = window:AddTab("Paid")
@@ -108,71 +108,65 @@ end
 
 local Rebirth = maintab:AddFolder("  Auto Rebirths")
 
-local RB = {}
-RB.__index = RB
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
 
-function RB.new(tab)
-    local self = setmetatable({}, RB)
-    self.on = false
-    self.target = 1
-    self.tab = tab
-    self:ui()
-    return self
-end
+local targetRebirths = 1
+local autoRebirthRunning = false
 
-function RB:ui()
-    self.input = self.tab:AddTextBox("Target Rebirth", function(v)
-        local n = tonumber(v)
-        if n and n >= 1 then
-            self.target = n
-        else
-            self.input:Set("")
-        end
-    end, { placeholder = "Enter target rebirths" })
+-- Caja de texto para definir el objetivo de renacimientos
+Rebirth:AddTextbox("Target Rebirths", function(value)
+    local n = tonumber(value)
+    if n and n >= 1 then
+        targetRebirths = n
+    else
+        targetRebirths = 1
+    end
+end, {
+    ["clear"] = false,
+    ["placeholder"] = "Enter target rebirths"
+})
 
-    self.tab:AddSwitch("Auto Rebirth(Target)", function(s)
-        self.on = s
-        if s then
-            self:run()
-        end
-    end)
-end
+-- Switch para activar/desactivar el auto rebirth con objetivo
+Rebirth:AddSwitch("Auto Rebirth (Target)", function(state)
+    autoRebirthRunning = state
 
-function RB:run()
-    task.spawn(function()
-        local leaderstats = LocalPlayer:WaitForChild("leaderstats")
-        local rebirths = leaderstats and leaderstats:WaitForChild("Rebirths")
-        local events = ReplicatedStorage:WaitForChild("rEvents")
-        local remote = events and events:WaitForChild("rebirthRemote")
+    if state then
+        task.spawn(function()
+            local leaderstats = LocalPlayer:WaitForChild("leaderstats")
+            local rebirths = leaderstats and leaderstats:WaitForChild("Rebirths")
+            local events = ReplicatedStorage:WaitForChild("rEvents")
+            local remote = events and events:WaitForChild("rebirthRemote")
 
-        if not (rebirths and remote) then
-            self.on = false
-            return
-        end
-
-        while self.on do
-            if rebirths.Value >= self.target then
-                self.on = false
-                print("Target rebirths reached! Stopping auto rebirth.")
-                break
+            if not (rebirths and remote) then
+                autoRebirthRunning = false
+                return
             end
 
-            local success, errorMessage = pcall(function()
-                remote:InvokeServer("rebirthRequest")
-            end)
+            while autoRebirthRunning do
+                if rebirths.Value >= targetRebirths then
+                    autoRebirthRunning = false
+                    print("Target rebirths reached! Stopping auto rebirth.")
+                    break
+                end
 
-            if not success then
-                warn("Failed to send rebirth request: " .. tostring(errorMessage))
+                local success, errorMessage = pcall(function()
+                    remote:InvokeServer("rebirthRequest")
+                end)
+
+                if not success then
+                    warn("Failed to send rebirth request: " .. tostring(errorMessage))
+                end
+
+                task.wait(1)
             end
-
-            task.wait(1)
-        end
-    end)
-end
-
-local myRebirth = RB.new(Rebirth)
+        end)
+    end
+end)
 
 local autoRebirth = false
+
 local switch = Rebirth:AddSwitch("Auto Rebirth (infinite)", function(state)
     autoRebirth = state
     while autoRebirth do
