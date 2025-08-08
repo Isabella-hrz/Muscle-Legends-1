@@ -106,7 +106,7 @@ for _, rock in ipairs(rockLocations) do
     end)
 end
 
-local RebirthFolder = maintab:AddFolder("  Auto Rebirths")
+local Rebirth = maintab:AddFolder("  Auto Rebirths")
 
 local RB = {}
 RB.__index = RB
@@ -121,7 +121,7 @@ function RB.new(tab)
 end
 
 function RB:ui()
-    self.input = RebirthFolder:AddTextBox("Target", function(v)
+    self.input = self.tab:AddTextBox("Target", function(v)
         local n = tonumber(v)
         if n and n >= 1 then
             self.target = n
@@ -130,7 +130,7 @@ function RB:ui()
         end
     end, { placeholder = "Enter target rebirths" })
 
-    local switch = RebirthFolder:AddSwitch("Auto Rebirth (Target)", function(s)
+    self.tab:AddSwitch("Auto Rebirth(Target)", function(s)
         self.on = s
         if s then
             self:run()
@@ -170,8 +170,10 @@ function RB:run()
     end)
 end
 
+local myRebirth = RB.new(Rebirth)
+
 local autoRebirth = false
-local switch = RebirthFolder:AddSwitch("Auto Rebirth (infinite)", function(state)
+local switch = Rebirth:AddSwitch("Auto Rebirth (infinite)", function(state)
     autoRebirth = state
     while autoRebirth do
         game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("rebirthRemote"):InvokeServer("rebirthRequest")
@@ -180,7 +182,7 @@ local switch = RebirthFolder:AddSwitch("Auto Rebirth (infinite)", function(state
 end)
 
 local autoSizeLoop = nil
-local switch = RebirthFolder:AddSwitch("Auto Size 2", function(state)
+local switch = Rebirth:AddSwitch("Auto Size 2", function(state)
     if state then
         autoSizeLoop = task.spawn(function()
             while task.wait(0) do
@@ -229,7 +231,7 @@ local function equipWeight()
     end
 end
 
-RebirthFolder:AddSwitch("Auto Weight", function(State)
+Rebirth:AddSwitch("Auto Weight", function(State)
     autoToggle = State
     print("Auto Lift & Equip toggle: " .. (State and "ON" or "OFF"))
     if State then
@@ -277,14 +279,5 @@ player.CharacterAdded:Connect(function()
     if autoToggle then
         print("Character respawned - Auto equipping weight...")
         equipWeight()
-    end
-end)
-
-local switch = RebirthFolder:AddSwitch("Hide All Frames", function(state)
-    local rSto = game:GetService("ReplicatedStorage")
-    for _, obj in pairs(rSto:GetChildren()) do
-        if obj.Name:match("Frame$") then
-            obj.Visible = not state
-        end
     end
 end)
