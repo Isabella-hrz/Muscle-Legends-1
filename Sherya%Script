@@ -105,3 +105,186 @@ for _, rock in ipairs(rockLocations) do
         end
     end)
 end
+
+local RebirthFolder = maintab:AddFolder("  Auto Rebirths")
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local autoToggle = false
+
+local function equipWeight()
+    local character = player.Character
+    if not character then
+        warn("Auto Equip - No character found!")
+        return false
+    end
+
+    local equippedWeight = character:FindFirstChild("Weight")
+    if equippedWeight then
+        print("Auto Equip - Weight already equipped!")
+        return true
+    end
+
+    local weightTool = player.Backpack:FindFirstChild("Weight")
+    if not weightTool then
+        warn("Auto Equip - Weight not found in Backpack!")
+        return false
+    end
+
+    weightTool.Parent = character
+    task.wait(0.1)
+    if character:FindFirstChild("Weight") then
+        print("Auto Equip - Equipped Weight!")
+        return true
+    else
+        warn("Auto Equip - Failed to equip Weight!")
+        return false
+    end
+end
+
+RebirthFolder:AddSwitch("Auto Lift", function(State)
+    autoToggle = State
+    print("Auto Lift & Equip toggle: " .. (State and "ON" or "OFF"))
+    if State then
+        task.spawn(function()
+            print("Auto Lift & Equip starting...")
+            while autoToggle do
+                local character = player.Character
+                if not character then
+                    print("Auto Lift & Equip - Waiting for character...")
+                    character = player.CharacterAdded:Wait()
+                end
+
+                if not character:FindFirstChild("Weight") then
+                    equipWeight()
+                end
+
+                local muscleEvent = player:WaitForChild("muscleEvent", 5)
+                if not muscleEvent then
+                    warn("Auto Lift & Equip - muscleEvent not found! Stopping.")
+                    autoToggle = false
+                    break
+                end
+
+                local success, result = pcall(function()
+                    return muscleEvent:FireServer("rep")
+                end)
+                if success then
+                    if result then
+                        print("Auto Lift & Equip - Rep successful!")
+                    else
+                        warn("Auto Lift & Equip - Rep failed: " .. tostring(result))
+                    end
+                else
+                    warn("Auto Lift & Equip - Rep error: " .. tostring(result))
+                end
+
+                task.wait()
+            end
+            print("Auto Lift & Equip stopped")
+        end)
+    end
+end)
+
+player.CharacterAdded:Connect(function()
+    if autoToggle then
+        print("Character respawned - Auto equipping weight...")
+        equipWeight()
+    end
+end)
+
+local RB = {}
+RB.__index = RB
+
+function RB.new(tab)
+    local self = setmetatable({}, RB)
+    self.on = false
+    self.target = 1
+    self.tab = tab
+    self:ui()
+    return self
+end
+
+function RB:ui()
+    self.input = self.tab:AddTextBox("Target", function(v)
+        local n = tonumber(v)
+        if n and n >= 1 then
+            self.target = n
+        else
+            self.input:Set("")
+        end
+    end, { placeholder = "Enter target rebirths" })
+
+    self.tab:AddSwitch("Auto Rebirth (Target)", function(s)
+        self.on = s
+        if s then
+            self:run()
+        end
+    end)
+end
+
+function RB:run()
+    task.spawn(function()
+        local leaderstats = LocalPlayer:WaitForChild("leaderstats")
+        local rebirths = leaderstats and leaderstats:WaitForChild("Rebirths")
+        local events = ReplicatedStorage:WaitForChild("rEvents")
+        local remote = events and events:WaitForChild("rebirthRemote")
+
+        if not (rebirths and remote) then
+            self.on = false
+            return
+        end
+
+        while self.on do
+            if rebirths.Value >= self.target then
+                self.on = false
+                print("Target rebirths reached! Stopping auto rebirth.")
+                break
+            end
+
+            local success, errorMessage = pcall(function()
+                remote:InvokeServer("rebirthRequest")
+            end)
+
+            if not success then
+                warn("Failed to send rebirth request: " .. tostring(errorMessage))
+            end
+
+            task.wait(1)
+        end
+    end)
+end
+
+local autoRebirth = false
+local switch = RebirthFolder:AddSwitch("Auto Rebirth (infinite)", function(state)
+    autoRebirth = state
+    while autoRebirth do
+        game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("rebirthRemote"):InvokeServer("rebirthRequest")
+        task.wait(0.1)
+    end
+end)
+
+local autoSizeLoop = nil
+local switch = RebirthFolder:AddSwitch("Auto Size 2", function(state)
+    if state then
+        autoSizeLoop = task.spawn(function()
+            while task.wait(0) do
+                game:GetService("ReplicatedStorage").rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", 2)
+            end
+        end)
+    else
+        if autoSizeLoop then
+            task.cancel(autoSizeLoop)
+            autoSizeLoop = nil
+        end
+    end
+end)
+
+local switch = RebirthFolder:AddSwitch("Hide All Frames", function(state)
+    local rSto = game:GetService("ReplicatedStorage")
+    for _, obj in pairs(rSto:GetChildren()) do
+        if obj.Name:match("Frame$") then
+            obj.Visible = not state
+        end
+    end
+end)
