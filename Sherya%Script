@@ -12,7 +12,7 @@ local window = library:AddWindow("Sherya Script", {
 })
 
 local maintab = window:AddTab("Main")
-local farmtab = window:AddTab("Farm")
+local gymtab = window:AddTab("Gyms")
 local misctab = window:AddTab("Misc")
 local eggtab = window:AddTab("Eggs")
 local paidtab = window:AddTab("Paid")
@@ -121,7 +121,7 @@ function RB.new(tab)
 end
 
 function RB:ui()
-    self.input = self.tab:AddTextBox("Target", function(v)
+    self.input = self.tab:AddTextBox("Target Rebirth", function(v)
         local n = tonumber(v)
         if n and n >= 1 then
             self.target = n
@@ -178,6 +178,26 @@ local switch = Rebirth:AddSwitch("Auto Rebirth (infinite)", function(state)
     while autoRebirth do
         game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("rebirthRemote"):InvokeServer("rebirthRequest")
         task.wait(0.1)
+    end
+end)
+
+local teleportLoop
+
+local switch = Rebirth:AddSwitch("Auto Teleport King", function(state)
+    if state then
+        teleportLoop = task.spawn(function()
+            while task.wait(0) do
+                local player = game.Players.LocalPlayer
+                if player.Character then
+                    player.Character:MoveTo(Vector3.new(-8646, 17, -5738))
+                end
+            end
+        end)
+    else
+        if teleportLoop then
+            task.cancel(teleportLoop)
+            teleportLoop = nil
+        end
     end
 end)
 
