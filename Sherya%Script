@@ -283,7 +283,7 @@ end
 
 local Rebirth = maintab:AddFolder("  Auto Rebirths")
 
-rebirthFolder:AddTextBox("Target Rebirth Amount", function(value)
+Rebirth:AddTextBox("Target Rebirth", function(value)
     local amount = tonumber(value) or 1
     local currentRebirths = leaderstats.Rebirths.Value
     if amount >= currentRebirths then
@@ -291,8 +291,7 @@ rebirthFolder:AddTextBox("Target Rebirth Amount", function(value)
     end
 end, {clear = false})
 
--- Target Rebirth Toggle
-local targetRebirthToggle = rebirthFolder:AddSwitch("Target Rebirth", function(enabled)
+Rebirth:AddSwitch("Target Rebirth", function(enabled)
     if enabled then
         task.spawn(function()
             while enabled do
@@ -322,7 +321,7 @@ end)
 
 local autoRebirth = false
 
-local switch = Rebirth:AddSwitch("Auto Rebirth (infinite)", function(state)
+Rebirth:AddSwitch("Auto Rebirth (infinite)", function(state)
     autoRebirth = state
     while autoRebirth do
         game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("rebirthRemote"):InvokeServer("rebirthRequest")
@@ -332,7 +331,7 @@ end)
 
 local teleportLoop
 
-local switch = Rebirth:AddSwitch("Auto Teleport King", function(state)
+Rebirth:AddSwitch("Auto Teleport King", function(state)
     if state then
         teleportLoop = task.spawn(function()
             while task.wait(0) do
@@ -350,8 +349,65 @@ local switch = Rebirth:AddSwitch("Auto Teleport King", function(state)
     end
 end)
 
+Rebirth:AddSwitch("Auto Teleport + Lock", function(enabled)
+    autoTeleportEnabled = enabled
+    local targetPosition = Vector3.new(-8745, 45, -5852)
+    local maxDistance = 5
+    local connection = nil
+    local characterConnection = nil
+    local lockedPosition = nil
+    
+    if enabled then
+        local function teleportAndLock(rootPart)
+            if rootPart then
+                rootPart.CFrame = CFrame.new(targetPosition)
+                rootPart.Velocity = Vector3.new(0, 0, 0)
+                rootPart.RotVelocity = Vector3.new(0, 0, 0)
+                lockedPosition = rootPart.CFrame
+            end
+        end
+        
+        -- Handle character respawn
+        characterConnection = player.CharacterAdded:Connect(function(char)
+            local rootPart = char:WaitForChild("HumanoidRootPart", 5)
+            if rootPart then
+                teleportAndLock(rootPart)
+            end
+        end)
+        
+        -- Main teleport loop
+        connection = RunService.Heartbeat:Connect(function()
+            if not autoTeleportEnabled then return end
+            
+            local char = player.Character
+            local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                local distance = (rootPart.Position - targetPosition).Magnitude
+                if distance > maxDistance then
+                    lockedPosition = nil
+                    teleportAndLock(rootPart)
+                else
+                    if not lockedPosition then
+                        lockedPosition = rootPart.CFrame
+                    end
+                    rootPart.CFrame = lockedPosition
+                    rootPart.Velocity = Vector3.new(0, 0, 0)
+                    rootPart.RotVelocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end)
+    else
+        if connection then
+            connection:Disconnect()
+        end
+        if characterConnection then
+            characterConnection:Disconnect()
+        end
+    end
+end)
+
 local autoSizeLoop = nil
-local switch = Rebirth:AddSwitch("Auto Size 2", function(state)
+Rebirth:AddSwitch("Auto Size 2", function(state)
     if state then
         autoSizeLoop = task.spawn(function()
             while task.wait(0) do
