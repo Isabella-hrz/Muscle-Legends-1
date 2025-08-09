@@ -12,7 +12,6 @@ local window = library:AddWindow("Sherya Script", {
 })
 
 local maintab = window:AddTab("Main")
-local gymtab = window:AddTab("Gyms")
 local misctab = window:AddTab("Misc")
 local eggtab = window:AddTab("Eggs")
 local paidtab = window:AddTab("Paid")
@@ -506,3 +505,202 @@ player.CharacterAdded:Connect(function()
     end
 end)
 
+local autoEquipToolsFolder = maintab:AddFolder("Auto Tools")
+
+autoEquipToolsFolder:AddButton("Gamepass AutoLift", function()
+    local gamepassFolder = game:GetService("ReplicatedStorage").gamepassIds
+    local player = game:GetService("Players").LocalPlayer
+    for _, gamepass in pairs(gamepassFolder:GetChildren()) do
+        local value = Instance.new("IntValue")
+        value.Name = gamepass.Name
+        value.Value = gamepass.Value
+        value.Parent = player.ownedGamepasses
+    end
+end)
+
+local function createAutoToolSwitch(toolName, globalVar)
+    autoEquipToolsFolder:AddSwitch("Auto " .. toolName, function(Value)
+        _G[globalVar] = Value
+        
+        if Value then
+            local tool = LocalPlayer.Backpack:FindFirstChild(toolName)
+            if tool then
+                LocalPlayer.Character.Humanoid:EquipTool(tool)
+            end
+        else
+            local character = LocalPlayer.Character
+            local equipped = character:FindFirstChild(toolName)
+            if equipped then
+                equipped.Parent = LocalPlayer.Backpack
+            end
+        end
+        
+        task.spawn(function()
+            while _G[globalVar] do
+                if not _G[globalVar] then break end
+                LocalPlayer.muscleEvent:FireServer("rep")
+                task.wait(0.1)
+            end
+        end)
+    end)
+end
+
+createAutoToolSwitch("Weight", "AutoWeight")
+createAutoToolSwitch("Pushups", "AutoPushups")
+createAutoToolSwitch("Handstands", "AutoHandstands")
+createAutoToolSwitch("Situps", "AutoSitups")
+
+autoEquipToolsFolder:AddSwitch("Auto Punch", function(Value)
+    _G.fastHitActive = Value
+    
+    if Value then
+        task.spawn(function()
+            while _G.fastHitActive do
+                if not _G.fastHitActive then break end
+                
+                local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
+                if punch then
+                    punch.Parent = LocalPlayer.Character
+                    if punch:FindFirstChild("attackTime") then
+                        punch.attackTime.Value = 0
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+        
+        task.spawn(function()
+            while _G.fastHitActive do
+                if not _G.fastHitActive then break end
+                
+                LocalPlayer.muscleEvent:FireServer("punch", "rightHand")
+                LocalPlayer.muscleEvent:FireServer("punch", "leftHand")
+                
+                local character = LocalPlayer.Character
+                if character then
+                    local punchTool = character:FindFirstChild("Punch")
+                    if punchTool then
+                        punchTool:Activate()
+                    end
+                end
+                task.wait()
+            end
+        end)
+    else
+        local character = LocalPlayer.Character
+        local equipped = character:FindFirstChild("Punch")
+        if equipped then
+            equipped.Parent = LocalPlayer.Backpack
+        end
+    end
+end)
+
+autoEquipToolsFolder:AddSwitch("Fast Tools", function(Value)
+    _G.FastTools = Value
+    
+    local toolSettings = {
+        {"Punch", "attackTime", Value and 0 or 0.35},
+        {"Ground Slam", "attackTime", Value and 0 or 6},
+        {"Stomp", "attackTime", Value and 0 or 7},
+        {"Handstands", "repTime", Value and 0 or 1},
+        {"Pushups", "repTime", Value and 0 or 1},
+        {"Weight", "repTime", Value and 0 or 1},
+        {"Situps", "repTime", Value and 0 or 1}
+    }
+    
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    
+    for _, toolInfo in ipairs(toolSettings) do
+        local tool = backpack:FindFirstChild(toolInfo[1])
+        if tool and tool:FindFirstChild(toolInfo[2]) then
+            tool[toolInfo[2]].Value = toolInfo[3]
+        end
+        
+        local equippedTool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(toolInfo[1])
+        if equippedTool and equippedTool:FindFirstChild(toolInfo[2]) then
+            equippedTool[toolInfo[2]].Value = toolInfo[3]
+        end
+    end
+end)
+
+local farmGymsFolder = maintab:AddFolder("Gyms")
+
+local workoutPositions = {
+    ["Bench Press"] = {
+        ["Eternal Gym"] = CFrame.new(-7176.19141, 45.394104, -1106.31421),
+        ["Legend Gym"] = CFrame.new(4111.91748, 1020.46674, -3799.97217),
+        ["Muscle King Gym"] = CFrame.new(-8590.06152, 46.0167427, -6043.34717)
+    },
+    ["Squat"] = {
+        ["Eternal Gym"] = CFrame.new(-7176.19141, 45.394104, -1106.31421),
+        ["Legend Gym"] = CFrame.new(4304.99023, 987.829956, -4124.2334),
+        ["Muscle King Gym"] = CFrame.new(-8940.12402, 13.1642084, -5699.13477)
+    },
+    ["Deadlift"] = {
+        ["Eternal Gym"] = CFrame.new(-7176.19141, 45.394104, -1106.31421),
+        ["Legend Gym"] = CFrame.new(4304.99023, 987.829956, -4124.2334),
+        ["Muscle King Gym"] = CFrame.new(-8940.12402, 13.1642084, -5699.13477)
+    },
+    ["Pull Up"] = {
+        ["Eternal Gym"] = CFrame.new(-7176.19141, 45.394104, -1106.31421),
+        ["Legend Gym"] = CFrame.new(4304.99023, 987.829956, -4124.2334),
+        ["Muscle King Gym"] = CFrame.new(-8940.12402, 13.1642084, -5699.13477)
+    }
+}
+
+local workoutTypes = {
+    "Bench Press",
+    "Squat",
+    "Deadlift",
+    "Pull Up"
+}
+
+local gymLocations = {
+    "Eternal Gym",
+    "Legend Gym",
+    "Muscle King Gym"
+}
+
+local workoutTranslations = {
+    ["Bench Press"] = "Bench Press",
+    ["Squat"] = "Squat",
+    ["Deadlift"] = "Dead Lift",
+    ["Pull Up"] = "Pull Up"
+}
+
+local gymToggles = {}
+
+for _, workoutType in ipairs(workoutTypes) do
+    local dropdownName = workoutType .. "GymDropdown"
+    local spanishWorkoutName = workoutTranslations[workoutType]
+    
+    local dropdown = farmGymsFolder:AddDropdown(spanishWorkoutName .. " - Gym", function(selected)
+        _G["selected" .. string.gsub(workoutType, " ", "") .. "Gym"] = selected
+    end)
+    
+    for _, gymName in ipairs(gymLocations) do
+        dropdown:Add(gymName)
+    end
+    
+    local toggleName = workoutType .. "GymToggle"
+    local toggle = farmGymsFolder:AddSwitch(spanishWorkoutName, function(bool)
+        getgenv().workingGym = bool
+        getgenv().currentWorkoutType = workoutType
+        
+        if bool then
+            local selectedGym = _G["selected" .. string.gsub(workoutType, " ", "") .. "Gym"] or gymLocations[1]
+            
+            if workoutPositions[workoutType] and workoutPositions[workoutType][selectedGym] then
+                for otherType, otherToggle in pairs(gymToggles) do
+                    if otherType ~= workoutType and otherToggle then
+                        otherToggle:Set(false)
+                    end
+                end
+                
+                teleportAndStart(workoutType, workoutPositions[workoutType][selectedGym])
+            end
+        end
+    end)
+    
+    gymToggles[workoutType] = toggle
+end
